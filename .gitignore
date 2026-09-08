@@ -1,0 +1,57 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---- Secrets ----
+# Real credentials never enter git history. Commit .env.example instead,
+# with placeholder values, so the repo stays runnable by someone else.
+.env
+.env.*
+!.env.example
+*.secret
+secrets/
+
+# ---- Wazuh generated TLS material ----
+# Indexer, manager and dashboard certs are produced locally by the Wazuh
+# cert-generation container. They are node-specific private keys; committing
+# them publishes a private key to GitHub and is the worst mistake available
+# in this project.
+config/wazuh_indexer_ssl_certs/
+*.pem
+*.key
+*.crt
+*.p12
+*.jks
+!**/fixtures/**/*.pem
+
+# ---- Docker / runtime state ----
+# Named volumes live in the Docker VM, but stray bind-mounted data dirs,
+# ModSecurity audit output and Wazuh archives are large and machine-specific.
+data/
+volumes/
+logs/
+*.log
+!fixtures/**/*.log
+modsec_audit/
+wazuh_data/
+
+# ---- Lab run artifacts ----
+# Replay output and generated reports are reproducible from the corpus plus
+# the compose stack, so they are outputs, not sources.
+results/
+reports/*.html
+reports/*.csv
+!reports/.gitkeep
+
+# ---- Editors / OS ----
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
