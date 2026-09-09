@@ -1,0 +1,5 @@
+NVIDIA GeForce RTX 5080 Founders Edition
+Memory: 16GB GDDR7
+Board power: 360W
+Recommended PSU: 850W
+Outputs: 3x DisplayPort 2.1b, 1x HDMI 2.1b

@@ -1,0 +1,5 @@
+AMD Ryzen 7 9800X3D
+Cores / threads: 8 / 16
+Base / boost: 4.7GHz / 5.2GHz
+L3 cache: 96MB (3D V-Cache)
+Socket: AM5, TDP 120W
