@@ -1,0 +1,858 @@
+- id: benign-001
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: O'Ryan
+  expected: allow
+  source: hand written
+- id: benign-002
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: Builder's Choice
+  expected: allow
+  source: hand written
+- id: benign-003
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: Editor's Pick
+  expected: allow
+  source: hand written
+- id: benign-004
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: Micro Center's
+  expected: allow
+  source: hand written
+- id: benign-005
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: d'angelo
+  expected: allow
+  source: hand written
+- id: benign-006
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: O'Neil
+  expected: allow
+  source: hand written
+- id: benign-007
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: it's a deal
+  expected: allow
+  source: hand written
+- id: benign-008
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: children's tablet
+  expected: allow
+  source: hand written
+- id: benign-009
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: men's headset
+  expected: allow
+  source: hand written
+- id: benign-010
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: O'Brien cables
+  expected: allow
+  source: hand written
+- id: benign-011
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: 20% off
+  expected: allow
+  source: hand written
+- id: benign-012
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: 100% cotton sleeve
+  expected: allow
+  source: hand written
+- id: benign-013
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: 50%
+  expected: allow
+  source: hand written
+- id: benign-014
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: '%'
+  expected: allow
+  source: hand written
+- id: benign-015
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: 5% cashback
+  expected: allow
+  source: hand written
+- id: benign-016
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: up to 30% discount
+  expected: allow
+  source: hand written
+- id: benign-017
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: '%pro%'
+  expected: allow
+  source: hand written
+- id: benign-018
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: 10 % restock fee
+  expected: allow
+  source: hand written
+- id: benign-019
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: 0% APR
+  expected: allow
+  source: hand written
+- id: benign-020
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: '%off%'
+  expected: allow
+  source: hand written
+- id: benign-021
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: select a good monitor
+  expected: allow
+  source: hand written
+- id: benign-022
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: drop in ddr5 prices
+  expected: allow
+  source: hand written
+- id: benign-023
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: order by price
+  expected: allow
+  source: hand written
+- id: benign-024
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: union jack sticker
+  expected: allow
+  source: hand written
+- id: benign-025
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: insert coin arcade
+  expected: allow
+  source: hand written
+- id: benign-026
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: delete confirmation
+  expected: allow
+  source: hand written
+- id: benign-027
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: where is my order
+  expected: allow
+  source: hand written
+- id: benign-028
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: table saw
+  expected: allow
+  source: hand written
+- id: benign-029
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: having trouble picking
+  expected: allow
+  source: hand written
+- id: benign-030
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: group buy motherboard
+  expected: allow
+  source: hand written
+- id: benign-031
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: update my build
+  expected: allow
+  source: hand written
+- id: benign-032
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: join the newsletter
+  expected: allow
+  source: hand written
+- id: benign-033
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: create a wishlist
+  expected: allow
+  source: hand written
+- id: benign-034
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: alter my order
+  expected: allow
+  source: hand written
+- id: benign-035
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: grant warranty
+  expected: allow
+  source: hand written
+- id: benign-036
+  category: benign
+  endpoint: /comment.php
+  method: POST
+  params:
+    product_id: 2
+    author: shopper
+    body: love it <3
+  expected: allow
+  source: hand written
+- id: benign-037
+  category: benign
+  endpoint: /comment.php
+  method: POST
+  params:
+    product_id: 3
+    author: shopper
+    body: great value --> buy it
+  expected: allow
+  source: hand written
+- id: benign-038
+  category: benign
+  endpoint: /comment.php
+  method: POST
+  params:
+    product_id: 4
+    author: shopper
+    body: <3 <3 <3
+  expected: allow
+  source: hand written
+- id: benign-039
+  category: benign
+  endpoint: /comment.php
+  method: POST
+  params:
+    product_id: 5
+    author: shopper
+    body: runs cool <3 quiet too
+  expected: allow
+  source: hand written
+- id: benign-040
+  category: benign
+  endpoint: /comment.php
+  method: POST
+  params:
+    product_id: 6
+    author: shopper
+    body: 5 stars --> recommend
+  expected: allow
+  source: hand written
+- id: benign-041
+  category: benign
+  endpoint: /comment.php
+  method: POST
+  params:
+    product_id: 7
+    author: shopper
+    body: best price i found -->
+  expected: allow
+  source: hand written
+- id: benign-042
+  category: benign
+  endpoint: /comment.php
+  method: POST
+  params:
+    product_id: 8
+    author: shopper
+    body: <3 this cooler
+  expected: allow
+  source: hand written
+- id: benign-043
+  category: benign
+  endpoint: /comment.php
+  method: POST
+  params:
+    product_id: 9
+    author: shopper
+    body: arrived fast <3
+  expected: allow
+  source: hand written
+- id: benign-044
+  category: benign
+  endpoint: /comment.php
+  method: POST
+  params:
+    product_id: 10
+    author: shopper
+    body: solid --> would buy again
+  expected: allow
+  source: hand written
+- id: benign-045
+  category: benign
+  endpoint: /comment.php
+  method: POST
+  params:
+    product_id: 11
+    author: shopper
+    body: quiet fan <3 no complaints
+  expected: allow
+  source: hand written
+- id: benign-046
+  category: benign
+  endpoint: /download.php
+  method: GET
+  params:
+    file: spec sheet.txt
+  expected: allow
+  source: hand written
+- id: benign-047
+  category: benign
+  endpoint: /download.php
+  method: GET
+  params:
+    file: rtx 5080 specs.txt
+  expected: allow
+  source: hand written
+- id: benign-048
+  category: benign
+  endpoint: /download.php
+  method: GET
+  params:
+    file: read me.txt
+  expected: allow
+  source: hand written
+- id: benign-049
+  category: benign
+  endpoint: /download.php
+  method: GET
+  params:
+    file: manual v2.1.txt
+  expected: allow
+  source: hand written
+- id: benign-050
+  category: benign
+  endpoint: /download.php
+  method: GET
+  params:
+    file: ryzen 9800x3d.txt
+  expected: allow
+  source: hand written
+- id: benign-051
+  category: benign
+  endpoint: /download.php
+  method: GET
+  params:
+    file: notes final.txt
+  expected: allow
+  source: hand written
+- id: benign-052
+  category: benign
+  endpoint: /download.php
+  method: GET
+  params:
+    file: install guide.txt
+  expected: allow
+  source: hand written
+- id: benign-053
+  category: benign
+  endpoint: /download.php
+  method: GET
+  params:
+    file: power draw.txt
+  expected: allow
+  source: hand written
+- id: benign-054
+  category: benign
+  endpoint: /download.php
+  method: GET
+  params:
+    file: quick start.txt
+  expected: allow
+  source: hand written
+- id: benign-055
+  category: benign
+  endpoint: /download.php
+  method: GET
+  params:
+    file: warranty info.txt
+  expected: allow
+  source: hand written
+- id: benign-056
+  category: benign
+  endpoint: /index.php
+  method: GET
+  params: {}
+  expected: allow
+  source: hand written
+  headers:
+    User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36
+- id: benign-057
+  category: benign
+  endpoint: /product.php
+  method: GET
+  params:
+    id: 2
+  expected: allow
+  source: hand written
+  headers:
+    User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0
+- id: benign-058
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: ddr5 32gb
+  expected: allow
+  source: hand written
+  headers:
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15
+- id: benign-059
+  category: benign
+  endpoint: /index.php
+  method: GET
+  params: {}
+  expected: allow
+  source: hand written
+  headers:
+    User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1
+- id: benign-060
+  category: benign
+  endpoint: /product.php
+  method: GET
+  params:
+    id: 5
+  expected: allow
+  source: hand written
+  headers:
+    User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0
+- id: benign-061
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: ddr5 32gb
+  expected: allow
+  source: hand written
+  headers:
+    User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36
+- id: benign-062
+  category: benign
+  endpoint: /index.php
+  method: GET
+  params: {}
+  expected: allow
+  source: hand written
+  headers:
+    User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0
+- id: benign-063
+  category: benign
+  endpoint: /product.php
+  method: GET
+  params:
+    id: 8
+  expected: allow
+  source: hand written
+  headers:
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15
+- id: benign-064
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: ddr5 32gb
+  expected: allow
+  source: hand written
+  headers:
+    User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1
+- id: benign-065
+  category: benign
+  endpoint: /index.php
+  method: GET
+  params: {}
+  expected: allow
+  source: hand written
+  headers:
+    User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0
+- id: benign-066
+  category: benign
+  endpoint: /product.php
+  method: GET
+  params:
+    id: 11
+  expected: allow
+  source: hand written
+  headers:
+    User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36
+- id: benign-067
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: ddr5 32gb
+  expected: allow
+  source: hand written
+  headers:
+    User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0
+- id: benign-068
+  category: benign
+  endpoint: /index.php
+  method: GET
+  params: {}
+  expected: allow
+  source: hand written
+  headers:
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15
+- id: benign-069
+  category: benign
+  endpoint: /product.php
+  method: GET
+  params:
+    id: 14
+  expected: allow
+  source: hand written
+  headers:
+    User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1
+- id: benign-070
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: ddr5 32gb
+  expected: allow
+  source: hand written
+  headers:
+    User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0
+- id: benign-071
+  category: benign
+  endpoint: /index.php
+  method: GET
+  params: {}
+  expected: allow
+  source: hand written
+  headers:
+    User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36
+- id: benign-072
+  category: benign
+  endpoint: /product.php
+  method: GET
+  params:
+    id: 17
+  expected: allow
+  source: hand written
+  headers:
+    User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0
+- id: benign-073
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: ddr5 32gb
+  expected: allow
+  source: hand written
+  headers:
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15
+- id: benign-074
+  category: benign
+  endpoint: /index.php
+  method: GET
+  params: {}
+  expected: allow
+  source: hand written
+  headers:
+    User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1
+- id: benign-075
+  category: benign
+  endpoint: /product.php
+  method: GET
+  params:
+    id: 20
+  expected: allow
+  source: hand written
+  headers:
+    User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0
+- id: benign-076
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: rtx 5080
+  expected: allow
+  source: hand written
+- id: benign-077
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: nvme ssd
+  expected: allow
+  source: hand written
+- id: benign-078
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: am5 motherboard
+  expected: allow
+  source: hand written
+- id: benign-079
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: 850w psu
+  expected: allow
+  source: hand written
+- id: benign-080
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: mechanical keyboard
+  expected: allow
+  source: hand written
+- id: benign-081
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: 4k monitor
+  expected: allow
+  source: hand written
+- id: benign-082
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: air cooler
+  expected: allow
+  source: hand written
+- id: benign-083
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: wifi router
+  expected: allow
+  source: hand written
+- id: benign-084
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: ddr5
+  expected: allow
+  source: hand written
+- id: benign-085
+  category: benign
+  endpoint: /search.php
+  method: GET
+  params:
+    q: pc case
+  expected: allow
+  source: hand written
+- id: benign-086
+  category: benign
+  endpoint: /login.php
+  method: POST
+  params:
+    username: alice
+    password: password1
+  expected: allow
+  source: hand written
+- id: benign-087
+  category: benign
+  endpoint: /login.php
+  method: POST
+  params:
+    username: bob
+    password: hunter2
+  expected: allow
+  source: hand written
+- id: benign-088
+  category: benign
+  endpoint: /login.php
+  method: POST
+  params:
+    username: admin
+    password: admin123
+  expected: allow
+  source: hand written
+- id: benign-089
+  category: benign
+  endpoint: /login.php
+  method: POST
+  params:
+    username: alice
+    password: password1
+  expected: allow
+  source: hand written
+- id: benign-090
+  category: benign
+  endpoint: /login.php
+  method: POST
+  params:
+    username: bob
+    password: hunter2
+  expected: allow
+  source: hand written
+- id: benign-091
+  category: benign
+  endpoint: /product.php
+  method: GET
+  params:
+    id: 1
+  expected: allow
+  source: hand written
+- id: benign-092
+  category: benign
+  endpoint: /product.php
+  method: GET
+  params:
+    id: 2
+  expected: allow
+  source: hand written
+- id: benign-093
+  category: benign
+  endpoint: /product.php
+  method: GET
+  params:
+    id: 3
+  expected: allow
+  source: hand written
+- id: benign-094
+  category: benign
+  endpoint: /product.php
+  method: GET
+  params:
+    id: 4
+  expected: allow
+  source: hand written
+- id: benign-095
+  category: benign
+  endpoint: /product.php
+  method: GET
+  params:
+    id: 5
+  expected: allow
+  source: hand written
+- id: benign-096
+  category: benign
+  endpoint: /product.php
+  method: GET
+  params:
+    id: 6
+  expected: allow
+  source: hand written
+- id: benign-097
+  category: benign
+  endpoint: /product.php
+  method: GET
+  params:
+    id: 7
+  expected: allow
+  source: hand written
+- id: benign-098
+  category: benign
+  endpoint: /product.php
+  method: GET
+  params:
+    id: 8
+  expected: allow
+  source: hand written
+- id: benign-099
+  category: benign
+  endpoint: /product.php
+  method: GET
+  params:
+    id: 9
+  expected: allow
+  source: hand written
+- id: benign-100
+  category: benign
+  endpoint: /product.php
+  method: GET
+  params:
+    id: 10
+  expected: allow
+  source: hand written

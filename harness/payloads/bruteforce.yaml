@@ -1,0 +1,270 @@
+- id: brute-001
+  category: bruteforce
+  endpoint: /login.php
+  method: POST
+  params:
+    username: admin
+    password: password
+  expected: allow
+  source: hand written
+- id: brute-002
+  category: bruteforce
+  endpoint: /login.php
+  method: POST
+  params:
+    username: admin
+    password: '123456'
+  expected: allow
+  source: hand written
+- id: brute-003
+  category: bruteforce
+  endpoint: /login.php
+  method: POST
+  params:
+    username: admin
+    password: admin
+  expected: allow
+  source: hand written
+- id: brute-004
+  category: bruteforce
+  endpoint: /login.php
+  method: POST
+  params:
+    username: administrator
+    password: password
+  expected: allow
+  source: hand written
+- id: brute-005
+  category: bruteforce
+  endpoint: /login.php
+  method: POST
+  params:
+    username: administrator
+    password: '123456'
+  expected: allow
+  source: hand written
+- id: brute-006
+  category: bruteforce
+  endpoint: /login.php
+  method: POST
+  params:
+    username: administrator
+    password: admin
+  expected: allow
+  source: hand written
+- id: brute-007
+  category: bruteforce
+  endpoint: /login.php
+  method: POST
+  params:
+    username: root
+    password: password
+  expected: allow
+  source: hand written
+- id: brute-008
+  category: bruteforce
+  endpoint: /login.php
+  method: POST
+  params:
+    username: root
+    password: '123456'
+  expected: allow
+  source: hand written
+- id: brute-009
+  category: bruteforce
+  endpoint: /login.php
+  method: POST
+  params:
+    username: root
+    password: admin
+  expected: allow
+  source: hand written
+- id: brute-010
+  category: bruteforce
+  endpoint: /login.php
+  method: POST
+  params:
+    username: alice
+    password: password
+  expected: allow
+  source: hand written
+- id: brute-011
+  category: bruteforce
+  endpoint: /login.php
+  method: POST
+  params:
+    username: alice
+    password: '123456'
+  expected: allow
+  source: hand written
+- id: brute-012
+  category: bruteforce
+  endpoint: /login.php
+  method: POST
+  params:
+    username: alice
+    password: admin
+  expected: allow
+  source: hand written
+- id: brute-013
+  category: bruteforce
+  endpoint: /login.php
+  method: POST
+  params:
+    username: bob
+    password: password
+  expected: allow
+  source: hand written
+- id: brute-014
+  category: bruteforce
+  endpoint: /login.php
+  method: POST
+  params:
+    username: bob
+    password: '123456'
+  expected: allow
+  source: hand written
+- id: brute-015
+  category: bruteforce
+  endpoint: /login.php
+  method: POST
+  params:
+    username: bob
+    password: admin
+  expected: allow
+  source: hand written
+- id: brute-016
+  category: bruteforce
+  endpoint: /login.php
+  method: POST
+  params:
+    username: test
+    password: password
+  expected: allow
+  source: hand written
+- id: brute-017
+  category: bruteforce
+  endpoint: /login.php
+  method: POST
+  params:
+    username: test
+    password: '123456'
+  expected: allow
+  source: hand written
+- id: brute-018
+  category: bruteforce
+  endpoint: /login.php
+  method: POST
+  params:
+    username: test
+    password: admin
+  expected: allow
+  source: hand written
+- id: brute-019
+  category: bruteforce
+  endpoint: /login.php
+  method: POST
+  params:
+    username: guest
+    password: password
+  expected: allow
+  source: hand written
+- id: brute-020
+  category: bruteforce
+  endpoint: /login.php
+  method: POST
+  params:
+    username: guest
+    password: '123456'
+  expected: allow
+  source: hand written
+- id: brute-021
+  category: bruteforce
+  endpoint: /login.php
+  method: POST
+  params:
+    username: guest
+    password: admin
+  expected: allow
+  source: hand written
+- id: brute-022
+  category: bruteforce
+  endpoint: /login.php
+  method: POST
+  params:
+    username: user
+    password: password
+  expected: allow
+  source: hand written
+- id: brute-023
+  category: bruteforce
+  endpoint: /login.php
+  method: POST
+  params:
+    username: user
+    password: '123456'
+  expected: allow
+  source: hand written
+- id: brute-024
+  category: bruteforce
+  endpoint: /login.php
+  method: POST
+  params:
+    username: user
+    password: admin
+  expected: allow
+  source: hand written
+- id: brute-025
+  category: bruteforce
+  endpoint: /login.php
+  method: POST
+  params:
+    username: oracle
+    password: password
+  expected: allow
+  source: hand written
+- id: brute-026
+  category: bruteforce
+  endpoint: /login.php
+  method: POST
+  params:
+    username: oracle
+    password: '123456'
+  expected: allow
+  source: hand written
+- id: brute-027
+  category: bruteforce
+  endpoint: /login.php
+  method: POST
+  params:
+    username: oracle
+    password: admin
+  expected: allow
+  source: hand written
+- id: brute-028
+  category: bruteforce
+  endpoint: /login.php
+  method: POST
+  params:
+    username: postgres
+    password: password
+  expected: allow
+  source: hand written
+- id: brute-029
+  category: bruteforce
+  endpoint: /login.php
+  method: POST
+  params:
+    username: postgres
+    password: '123456'
+  expected: allow
+  source: hand written
+- id: brute-030
+  category: bruteforce
+  endpoint: /login.php
+  method: POST
+  params:
+    username: postgres
+    password: admin
+  expected: allow
+  source: hand written

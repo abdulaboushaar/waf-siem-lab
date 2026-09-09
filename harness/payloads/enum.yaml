@@ -1,0 +1,140 @@
+- id: enum-001
+  category: enum
+  endpoint: /wp-login.php
+  method: GET
+  params: {}
+  expected: allow
+  source: hand written
+- id: enum-002
+  category: enum
+  endpoint: /wp-admin/
+  method: GET
+  params: {}
+  expected: allow
+  source: hand written
+- id: enum-003
+  category: enum
+  endpoint: /.env
+  method: GET
+  params: {}
+  expected: allow
+  source: hand written
+- id: enum-004
+  category: enum
+  endpoint: /.git/config
+  method: GET
+  params: {}
+  expected: allow
+  source: hand written
+- id: enum-005
+  category: enum
+  endpoint: /phpmyadmin/
+  method: GET
+  params: {}
+  expected: allow
+  source: hand written
+- id: enum-006
+  category: enum
+  endpoint: /admin/config.php
+  method: GET
+  params: {}
+  expected: allow
+  source: hand written
+- id: enum-007
+  category: enum
+  endpoint: /backup.zip
+  method: GET
+  params: {}
+  expected: allow
+  source: hand written
+- id: enum-008
+  category: enum
+  endpoint: /server-status
+  method: GET
+  params: {}
+  expected: allow
+  source: hand written
+- id: enum-009
+  category: enum
+  endpoint: /.aws/credentials
+  method: GET
+  params: {}
+  expected: allow
+  source: hand written
+- id: enum-010
+  category: enum
+  endpoint: /config.php.bak
+  method: GET
+  params: {}
+  expected: allow
+  source: hand written
+- id: enum-011
+  category: enum
+  endpoint: /shell.php
+  method: GET
+  params: {}
+  expected: allow
+  source: hand written
+- id: enum-012
+  category: enum
+  endpoint: /xmlrpc.php
+  method: GET
+  params: {}
+  expected: allow
+  source: hand written
+- id: enum-013
+  category: enum
+  endpoint: /vendor/phpunit/phpunit/phpunit
+  method: GET
+  params: {}
+  expected: allow
+  source: hand written
+- id: enum-014
+  category: enum
+  endpoint: /actuator/health
+  method: GET
+  params: {}
+  expected: allow
+  source: hand written
+- id: enum-015
+  category: enum
+  endpoint: /api/v1/users
+  method: GET
+  params: {}
+  expected: allow
+  source: hand written
+- id: enum-016
+  category: enum
+  endpoint: /.ssh/id_rsa
+  method: GET
+  params: {}
+  expected: allow
+  source: hand written
+- id: enum-017
+  category: enum
+  endpoint: /wp-content/
+  method: GET
+  params: {}
+  expected: allow
+  source: hand written
+- id: enum-018
+  category: enum
+  endpoint: /cgi-bin/test.cgi
+  method: GET
+  params: {}
+  expected: allow
+  source: hand written
+- id: enum-019
+  category: enum
+  endpoint: /console
+  method: GET
+  params: {}
+  expected: allow
+  source: hand written
+- id: enum-020
+  category: enum
+  endpoint: /.svn/entries
+  method: GET
+  params: {}
+  expected: allow
+  source: hand written
