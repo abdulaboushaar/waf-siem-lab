@@ -1,0 +1,57 @@
+name: waf-siem-lab
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: lab-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    # SECURITY-RELEVANT: no ports: block. The database is reachable only on the
+    # internal compose network. Publishing 3306 would expose a weakly
+    # credentialed database to anything that can route to this host.
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    networks: [labnet]
+
+  app:
+    build: ./app
+    container_name: lab-app
+    restart: unless-stopped
+    environment:
+      DB_HOST: db
+      DB_NAME: ${MYSQL_DATABASE}
+      DB_USER: ${MYSQL_USER}
+      DB_PASS: ${MYSQL_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
+    # SECURITY-RELEVANT: bound to loopback only. This application has working
+    # SQL injection and path traversal. "8080:80" would publish it on every
+    # interface including the LAN. In Step 2 this publish is removed entirely
+    # and the WAF becomes the only reachable entry point.
+    ports:
+      - "127.0.0.1:8080:80"
+    volumes:
+      # Named volume so the normalizer and the Wazuh agent can mount the same
+      # log directory read-only in later steps.
+      - app_logs:/var/log/app
+    networks: [labnet]
+
+volumes:
+  db_data:
+  app_logs:
+
+networks:
+  labnet:
+    driver: bridge
