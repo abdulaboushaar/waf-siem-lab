@@ -166,6 +166,68 @@ to an existing endpoint later would invalidate any report already generated.
 **Verify.** Every `VULNERABILITY:` comment in `app/src/` names a CWE, and each
 endpoint's primary defect matches one row of the README table.
 
+--- 
+
+## D-0006: Attack payloads sourced from PayloadsAllTheThings and cited, not invented
+
+- **Date:** 2026-09-09
+- **Status:** accepted
+
+**Context.** The harness needs a corpus of SQLi, XSS and traversal payloads to
+fire at the WAF. These could be hand written, or copied from an established
+public payload collection.
+
+**Decision.** The attack sets are copied from PayloadsAllTheThings and converted
+to the YAML schema by build_attacks.py, which stamps every entry with a
+citation of the form PayloadsAllTheThings@<commit>:<path>:L<line>. The
+repository commit and licence are recorded in payloads/ATTACKS.md. No attack
+payload is invented.
+
+**Alternative rejected.** Hand authoring the payloads. Rejected for two reasons.
+Payloads I write would be biased toward the exact evasions I already know CRS
+catches, which would silently inflate the block rate and make the measurement
+circular. And a public portfolio that copies a payload corpus without recording
+its source and licence is a provenance failure a security employer will notice.
+
+**Consequences.** The repository does not ship the third-party payloads
+themselves (harness/payloads/raw/ is gitignored), so a fresh clone must follow
+the ATTACKS.md procedure to rebuild the attack YAML. The benign, bruteforce and
+enum sets have no upstream source and are generated locally by gen_corpus.py.
+
+**Verify.** Every entry in sqli.yaml, xss.yaml and traversal.yaml has a source
+field beginning with PayloadsAllTheThings@, and ATTACKS.md records the commit
+and licence.
+
+---
+
+## D-0007: bruteforce and enum payloads are labeled expected:allow
+
+- **Date:** 2026-09-09
+- **Status:** accepted
+
+**Context.** The corpus includes brute-force login attempts and enumeration
+requests for paths that do not exist. Each payload carries an expected value of
+allow or block, which is what the report scores the WAF against.
+
+**Decision.** bruteforce and enum payloads are labeled expected:allow. Only the
+single-request signature attacks (sqli, xss, traversal) are labeled block.
+
+**Alternative rejected.** Labeling bruteforce and enum as block. Rejected
+because no single login attempt or single request for a missing path is a
+WAF-blockable event; each one looks identical to legitimate traffic. The attack
+is the volume, which a signature WAF cannot see. Scoring CRS as failing to block
+them would produce a dishonest block rate and would hide the reason the SIEM
+half of the project exists.
+
+**Consequences.** These categories will show a near-zero block rate at the WAF
+and that is the correct result, not a gap. Their detection is deferred to Wazuh
+correlation rules in Step 5 (a burst of login_failed outcomes or 404s grouped by
+client IP over a time window). The report must present WAF block rate and SIEM
+correlation detection as answering different questions.
+
+**Verify.** grep 'expected: block' across the payload sets returns only sqli,
+xss and traversal entries; bruteforce.yaml and enum.yaml contain only
+expected: allow.
 ---
 
 ## D-XXXX: <short imperative title>
