@@ -228,6 +228,70 @@ correlation detection as answering different questions.
 **Verify.** grep 'expected: block' across the payload sets returns only sqli,
 xss and traversal entries; bruteforce.yaml and enum.yaml contain only
 expected: allow.
+
+---
+
+## D-0008: WAF config split into common.env plus per-paranoia-level files
+
+Date: 2026-09-11
+Status: accepted
+
+Context. The WAF is run four times, once per CRS paranoia level, and the runs must be identical in every respect except the paranoia level, or the comparison between them is not valid. The configuration could be four self-contained env files, or one shared file plus a tiny per-level file.
+
+Decision. waf/common.env holds every shared setting (BACKEND, rule engine, JSON audit logging, anomaly thresholds). waf/pl1.env through pl4.env set only BLOCKING_PARANOIA. Compose loads common.env plus one pl file selected by the WAF_PL variable in .env.
+
+Alternative rejected. Four self-contained env files. Rejected because the moment a shared setting changes it must be edited in four places, they drift, and the guarantee that runs differ only in paranoia level silently rots, which would invalidate the comparison the whole report rests on.
+
+Consequences. Switching level is WAF_PL=pl2 docker compose up -d. The variable name is BLOCKING_PARANOIA in the current image; older images used PARANOIA. Verified against this image with docker exec lab-waf env | grep -i paranoia.
+
+Verify. diff waf/pl1.env waf/pl4.env differs only in the level digit.
+
+--- 
+
+## D-0009: DetectionOnly for bring-up, enforced blocking for measurement
+Date: 2026-09-11
+Status: accepted
+
+Context. ModSecurity can inspect and score without blocking (DetectionOnly) or inspect and enforce (On). With MODSEC_AUDIT_ENGINE=RelevantOnly the audit log records only transactions with a relevant response status (4xx or 5xx, not 404) or a rule that forces logging. A detected request that is not blocked returns 200 and is not written to the audit log.
+
+Decision. Bring the WAF up in DetectionOnly to confirm plumbing without breaking traffic, then switch MODSEC_RULE_ENGINE to On for the measurement runs. In enforced mode a blocked request returns 403, which is a relevant status, so RelevantOnly logs exactly the blocked requests: attacks caught and benign false positives. Allowed requests produce no WAF audit event, which is correct; the report treats absence of a WAF event as allowed.
+
+Alternative rejected. Measuring in DetectionOnly. Rejected because with RelevantOnly a detected-but-not-blocked request returns 200 and is never logged, so the WAF's decisions would be invisible. Capturing them in detection mode would require MODSEC_AUDIT_ENGINE=On, which logs every request and is heavier; enforced blocking plus RelevantOnly yields the exact events the report needs.
+
+Consequences. Measurement runs actually block, so the vulnerable app is protected during a run, which is faithful to production. Sub-threshold detections (scored but below the block threshold) are not visible in enforced mode; that is acceptable because the report counts blocked versus not blocked. Replay must use http://localhost:8080, not 127.0.0.1: a numeric-IP Host header trips rule 920350 and adds score to every request, which would contaminate the false positive rate.
+
+Verify. With the engine On, a traversal at /download.php returns 403 and the audit log's last entry shows http_code 403 and rule 949110.
+
+--- 
+
+## D-0010: Apostrophe exclusion is a documented remediation, measured separately
+Date: 2026-09-11
+Status: accepted
+
+Context. A benign apostrophe in the search box (for example "Builder's Choice") is a classic SQLi false positive. A custom exclusion can remove SQLi detection from ARGS:q on /search.php. But the SQLi attack corpus also fires at /search.php?q=, so an active exclusion would suppress those attacks and understate the SQLi block rate. The exclusion and the attack corpus target the same parameter.
+
+Decision. Measure raw CRS first with no exclusion, reporting the apostrophe false positive as one of the false positives. Then, as a separate tuned run, enable the exclusion and show the before-and-after: the false positive disappears and the SQLi block rate on that path drops as the cost. The exclusion mount is commented out in docker-compose.yml by default. The exclusion is scoped to /search.php and ARGS:q using a runtime ctl action in a before-CRS file.
+
+Alternative rejected. Shipping the exclusion active, or disabling the SQLi rules globally. An active exclusion corrupts the raw measurement. A global disable (SecRuleRemoveById) blinds the signature for every parameter and path, not just the one false positive.
+
+Consequences. The tuned run demonstrates the real tradeoff: even a correctly scoped exclusion allows real SQLi through q on /search.php, because the same parameter cannot be both excluded from SQLi detection and protected against it. The exclusion is a compensating control; the actual fix is a prepared statement in the app. Filling the exclusion in correctly requires reading the matched rule IDs from the audit log, not trusting a hard-coded list.
+
+Verify. With the exclusion mount off, a SQLi at /search.php?q= returns 403; with it on, the same request is allowed while a SQLi on another path still blocks.
+
+D-0011: A one-shot init container fixes the audit-volume ownership
+Date: 2026-09-11
+Status: accepted
+
+Context. The WAF image runs as the unprivileged nginx user (uid 101). The modsec_audit named volume mounts in owned by root, so nginx cannot create the audit log inside it and ModSecurity silently writes nothing.
+
+Decision. A one-shot waf-init container (busybox) chowns the volume to uid 101 and exits. The WAF depends on it with condition: service_completed_successfully, so the volume is writable before ModSecurity starts, on every up and on a fresh clone, with no manual step.
+
+Alternative rejected. A manual chown, or running the WAF as root. A manual chown resets on docker compose down -v and is a step a teammate will forget. Running the WAF as root discards the image's unprivileged posture.
+
+Consequences. One extra short-lived container in the stack. The fix is in version control rather than in a person's shell history, so the audit log is reproducibly writable.
+
+Verify. docker exec lab-waf ls -la /var/log/modsec/ shows the directory owned by nginx, and the audit log file appears after the first blocked request.
+
 ---
 
 ## D-XXXX: <short imperative title>

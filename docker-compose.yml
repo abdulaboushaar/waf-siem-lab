@@ -11,8 +11,7 @@ services:
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     # SECURITY-RELEVANT: no ports: block. The database is reachable only on the
-    # internal compose network. Publishing 3306 would expose a weakly
-    # credentialed database to anything that can route to this host.
+    # internal compose network.
     volumes:
       - db_data:/var/lib/mysql
       - ./db/init:/docker-entrypoint-initdb.d:ro
@@ -36,21 +35,47 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    # SECURITY-RELEVANT: bound to loopback only. This application has working
-    # SQL injection and path traversal. "8080:80" would publish it on every
-    # interface including the LAN. In Step 2 this publish is removed entirely
-    # and the WAF becomes the only reachable entry point.
-    ports:
-      - "127.0.0.1:8080:80"
+    # SECURITY-RELEVANT: no ports: block anymore. The app is no longer reachable
+    # from the host. The WAF is now the only entry point, and it reaches the app
+    # over the internal network as http://app:80.
     volumes:
-      # Named volume so the normalizer and the Wazuh agent can mount the same
-      # log directory read-only in later steps.
       - app_logs:/var/log/app
+    networks: [labnet]
+
+  waf-init:
+    image: busybox:1.36
+    container_name: lab-waf-init
+    command: sh -c "mkdir -p /vol && chown -R 101:101 /vol"
+    volumes:
+      - modsec_audit:/vol
+    restart: "no"
+    networks: [labnet]
+
+  waf:
+    image: owasp/modsecurity-crs@sha256:1cf0a567e88e3b71862a3bc009dcc28ee620971cc672aa564872a3052edb5680
+    container_name: lab-waf
+    restart: unless-stopped
+    env_file:
+      - waf/common.env
+      - waf/${WAF_PL:-pl1}.env
+    depends_on:
+      app:
+        condition: service_started
+      waf-init:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - modsec_audit:/var/log/modsec
+      # Exclusion is a documented remediation, not part of the raw measurement.
+      # Re-enable it only for the "tuned" comparison run (see DECISIONS D-0010).
+      # - ./waf/rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf:/etc/modsecurity.d/owasp-crs/rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf:ro
     networks: [labnet]
 
 volumes:
   db_data:
   app_logs:
+  modsec_audit:
 
 networks:
   labnet:

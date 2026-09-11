@@ -8,8 +8,8 @@
 > reachable from anywhere else.
 >
 > Do not deploy it. Do not expose it to a network you do not control. The Compose
-> file binds the application to `127.0.0.1` on purpose; do not change that to
-> `0.0.0.0`.
+> file binds every published port to `127.0.0.1` on purpose; do not change that
+> to `0.0.0.0`.
 
 ## What this measures
 
@@ -43,26 +43,26 @@ flowchart LR
 ```
 
 The correlation ID is the load-bearing part. The harness stamps every request
-with `X-Lab-Request-Id`. The WAF records it, the application records it, and the
-SIEM can therefore join the firewall's decision to what the application actually
-did. Without it there are two unrelated piles of logs.
+with `X-Lab-Request-Id`. The WAF records it in its audit log, the application
+records it in its own log, and the two can therefore be joined on that id for
+the same request. Without it there are two unrelated piles of logs.
 
 ## Status
 
-| Step | Component | State |
-|------|-----------|-------|
-| 0 | Host environment (WSL2, Docker, toolchain) | Done |
-| 1 | Vulnerable PHP app, MySQL, structured request log | Done |
-| 2 | ModSecurity + CRS reverse proxy | Not started |
-| 3 | Python normalizer for the ModSecurity audit log | Not started |
-| 4 | Wazuh single-node ingest and detection rules | Not started |
-| 5 | Replay harness and paranoia-level report | Not started |
+| Component | State |
+|-----------|-------|
+| Host environment (WSL2, Docker, toolchain) | Done |
+| Vulnerable PHP app, MySQL, structured request log | Done |
+| Traffic harness (labeled corpus, replay, report) | Done |
+| ModSecurity + CRS reverse proxy (WAF) | Done |
+| Python normalizer for the ModSecurity audit log | Not started |
+| Wazuh single-node ingest and detection rules | Not started |
+| Paranoia-level measurement runs and final report | Not started |
 
 ## Host prerequisites
 
 Developed on Windows 11 with WSL2 (Ubuntu 24.04) and Docker Desktop with WSL
-integration enabled. Any Linux host with Docker and Compose v2 will work for
-steps 0 and 1.
+integration enabled. Any Linux host with Docker and Compose v2 works.
 
 The repository must live on the Linux filesystem (`~/waf-siem-lab`), not under
 `/mnt/c`. See D-0001 in `DECISIONS.md`.
@@ -87,10 +87,12 @@ See D-0002.
 cp .env.example .env
 # edit .env and set your own values
 docker compose up -d --build
-docker compose ps            # wait for lab-db to report healthy
+docker compose ps            # wait for lab-db healthy, lab-waf-init exited 0
 ```
 
-Then open <http://127.0.0.1:8080>.
+The WAF is the only host-facing entry point, on <http://localhost:8080>. The app
+is not published to the host; it is reachable only through the WAF on the
+internal network.
 
 Reseeding the database requires destroying the volume, because MySQL only runs
 `db/init/` on an empty data directory:
@@ -98,6 +100,46 @@ Reseeding the database requires destroying the volume, because MySQL only runs
 ```bash
 docker compose down -v && docker compose up -d --build
 ```
+
+## The WAF
+
+The `waf` service runs the `owasp/modsecurity-crs:nginx` image as a reverse
+proxy in front of the app. Configuration is split so a measurement run changes
+exactly one variable:
+
+- `waf/common.env` holds every setting shared across runs: the backend target,
+  the rule engine mode, JSON audit logging to `/var/log/modsec/modsec_audit.log`
+  on the `modsec_audit` volume, and the anomaly thresholds.
+- `waf/pl1.env` through `waf/pl4.env` set only `BLOCKING_PARANOIA`.
+
+Select the paranoia level with the `WAF_PL` variable in `.env`
+(`WAF_PL=pl1` .. `pl4`), then `docker compose up -d`. See D-0008.
+
+**Modes.** The rule engine starts in `DetectionOnly` for bring-up (inspect and
+score, never block), then is switched to `On` for measurement (enforce blocks).
+With `MODSEC_AUDIT_ENGINE=RelevantOnly` and blocking on, the audit log records
+exactly the requests that were blocked, which is what the report counts. See
+D-0009.
+
+**Audit volume ownership.** The image runs as the unprivileged `nginx` user, but
+the `modsec_audit` volume mounts in owned by root. A one-shot `waf-init`
+container fixes the ownership before the WAF starts, so the audit log is
+writable on a fresh clone with no manual step. See D-0011.
+
+**Custom exclusions.** `waf/rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf`
+fixes a false positive on apostrophes in the search box, scoped to `/search.php`
+and the `q` parameter only. It is a documented remediation, not part of the raw
+measurement, so its mount is commented out in `docker-compose.yml` and enabled
+only for the tuned comparison run. See D-0010.
+
+**Measurement hygiene.** Replay against `http://localhost:8080`, never
+`http://127.0.0.1:8080`. A numeric-IP Host header trips CRS rule 920350 and adds
+score to every request, which would inflate the false positive rate with an
+artifact of how the client addressed the server. `localhost` is a name, so the
+rule does not fire. `replay.py` defaults to `localhost`.
+
+Pin the image by digest in `docker-compose.yml` (not the moving `:nginx` tag) so
+a paranoia sweep cannot have the CRS version change underneath it between runs.
 
 ## Test accounts
 
@@ -130,6 +172,23 @@ missing CSRF token (CWE-352) on the comment form.
 
 Every deliberate weakness is marked in the source with a `VULNERABILITY:`
 comment naming the CWE and the one-line fix.
+
+## The traffic harness
+
+`harness/` holds the labeled corpus and the tooling that fires it.
+
+- `harness/payloads/benign.yaml`, `bruteforce.yaml`, `enum.yaml` are generated
+  by `gen_corpus.py` and tied to the seed data.
+- The `sqli`, `xss` and `traversal` sets are built from PayloadsAllTheThings by
+  `build_attacks.py`, with a citation in every entry. See `payloads/ATTACKS.md`
+  and D-0006.
+- `bruteforce` and `enum` are labeled `expected: allow`, because they are not
+  single-request WAF-blockable; their detection is a SIEM correlation job. See
+  D-0007.
+- `replay.py` sends each payload with a fresh `X-Lab-Request-Id` and records
+  status and blocked/allowed to `results/<label>.csv`.
+- `report.py` joins the results with the WAF and app logs on the correlation id
+  and prints block rate and false positive rate per category.
 
 ## Application log schema
 
@@ -169,8 +228,16 @@ waf-siem-lab/
 │   ├── Dockerfile          php:8.3-apache + pdo_mysql
 │   ├── src/                application source
 │   └── specs/              spec sheets, outside the document root
-└── db/
-    └── init/               schema and seed, run once on first start
+├── db/
+│   └── init/               schema and seed, run once on first start
+├── waf/
+│   ├── common.env          shared WAF config
+│   ├── pl1.env .. pl4.env   paranoia level only
+│   └── rules/              custom exclusion (documented remediation)
+└── harness/
+    ├── replay.py
+    ├── report.py
+    └── payloads/           corpus and generators
 ```
 
 ## Decisions
@@ -181,7 +248,7 @@ the alternative that was rejected and why. Read it before the code.
 ## Secrets
 
 No credentials, private keys or certificates are committed. `.env` is ignored;
-`.env.example` documents the shape. Wazuh's TLS material is generated locally in
-step 4 and is excluded by `.gitignore`, which means a fresh clone needs the
-generation step rather than working immediately. That tradeoff is deliberate and
-is recorded in `DECISIONS.md`.
+`.env.example` documents the shape. Wazuh's TLS material is generated locally
+and is excluded by `.gitignore`, which means a fresh clone needs the generation
+step rather than working immediately. That tradeoff is deliberate and is
+recorded in `DECISIONS.md`.
