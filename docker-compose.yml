@@ -72,10 +72,29 @@ services:
       # - ./waf/rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf:/etc/modsecurity.d/owasp-crs/rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf:ro
     networks: [labnet]
 
+  normalizer:
+    build: ./normalizer
+    container_name: lab-normalizer
+    restart: unless-stopped
+    environment:
+      AUDIT_LOG: /var/log/modsec/modsec_audit.log
+      OUT_FILE: /var/log/lab/waf_events.jsonl
+      OFFSET_FILE: /var/log/lab/.normalizer.offset
+      PARANOIA_LEVEL: ${WAF_PL:-pl1}
+      POLL_INTERVAL: "1.0"
+    depends_on:
+      waf:
+        condition: service_started
+    volumes:
+      - modsec_audit:/var/log/modsec:ro
+      - lab_logs:/var/log/lab
+    networks: [labnet]
+
 volumes:
   db_data:
   app_logs:
   modsec_audit:
+  lab_logs:
 
 networks:
   labnet:
