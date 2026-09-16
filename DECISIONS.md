@@ -278,7 +278,7 @@ Consequences. The tuned run demonstrates the real tradeoff: even a correctly sco
 
 Verify. With the exclusion mount off, a SQLi at /search.php?q= returns 403; with it on, the same request is allowed while a SQLi on another path still blocks.
 
-D-0011: A one-shot init container fixes the audit-volume ownership
+## D-0011: A one-shot init container fixes the audit-volume ownership
 Date: 2026-09-11
 Status: accepted
 
@@ -293,6 +293,52 @@ Consequences. One extra short-lived container in the stack. The fix is in versio
 Verify. docker exec lab-waf ls -la /var/log/modsec/ shows the directory owned by nginx, and the audit log file appears after the first blocked request.
 
 ---
+
+## D-0012: Normalize the WAF audit log before ingestion, rather than decode it in Wazuh
+Date: 2026-09-14
+Status: accepted
+
+Context. ModSecurity writes a deeply nested JSON audit log. Wazuh needs flat, regular fields to alert on. The flattening could happen inside Wazuh with custom decoders, or in a small script before Wazuh ever sees the data.
+
+Decision. A stdlib-only Python normalizer (normalizer/) tails the audit log and writes one flat event per transaction to /var/log/lab/waf_events.jsonl, which Wazuh reads with log_format json. Derived fields (blocked, anomaly_score) and the correlation id are computed there.
+
+Alternative rejected. Pointing Wazuh at the raw audit log and writing decoders. Rejected because the audit JSON is nested and variable (the score is buried in a message string, the id inside a headers object), which Wazuh's decoder engine handles poorly; because derived fields are logic that belongs in code; because a clean flat format stays portable to any SIEM; and because the normalizer is testable in isolation without a running SIEM.
+
+Consequences. One more moving part (the normalizer container) and a second log format to maintain. In exchange, Wazuh rules stay simple and the events feed any downstream tool unchanged. Choose the opposite (decode in place) when you do not control the log producer, when real-time volume makes an extra hop costly, when the SIEM must hold the original log as system of record, or when the source is already flat.
+
+Verify. waf_events.jsonl contains one flat JSON object per WAF transaction with request_id preserved, and report.py joins it on request_id.
+
+--- 
+
+## D-0013: Wazuh runs as a separate upstream project, wired via external volumes
+Date: 2026-09-16
+Status: accepted
+
+Context. The SIEM is the official wazuh-docker single-node stack, which is a maintained unit with its own compose file, certificates, and versioning. It needs to read this project's two log streams. It could be folded into this repo's docker-compose.yml, or run as its own project that mounts this project's log volumes.
+
+Decision. wazuh-docker is cloned separately (v4.14.7, at ~/wazuh-docker) and left as upstream. It mounts this project's named volumes as EXTERNAL, read-only: waf-siem-lab_lab_logs to /var/log/lab and waf-siem-lab_app_logs to /var/log/app. The custom rules file is bind-mounted in, and the manager config gains localfile json blocks. The clone itself, its generated certs, and the changed indexer password are NOT committed to this repo; siem/README.md documents how to reproduce them.
+
+Alternative rejected. Merging Wazuh into this repo's compose file. Rejected because it would mean owning the whole official stack by hand and re-merging it on every Wazuh update, for no benefit over sharing the log volumes.
+
+Consequences. A fresh clone of this repo does not get a running SIEM; a reader must follow siem/README.md to stand up wazuh-docker and wire it. The read-only mounts keep the SIEM from altering the logs it monitors. Two operational gotchas are documented: manager config changes need docker compose up -d --force-recreate (a restart does not re-copy config), and the single-file rules bind mount pins to an inode, so replacing local_rules.xml also needs --force-recreate.
+
+Verify. docker exec on the manager lists /var/log/lab and /var/log/app with this project's files, and wazuh-logtest fires the custom rules.
+
+--- 
+
+## D-0014: Detections authored twice, executable Wazuh XML plus portable Sigma
+Date: 2026-09-16
+Status: accepted
+
+Context. The detections need to run in this lab's SIEM, and they should also demonstrate portability and use of the industry standard detection format.
+
+Decision. Each detection is written as an executable Wazuh rule in wazuh/local_rules.xml, and a subset (the SQLi-reached, single-source brute force, distributed brute force, and admin broken-access-control rules) is also written as Sigma in detections/sigma/. The Sigma rules convert cleanly to Splunk and Elastic and serve as vendor-neutral documentation of intent.
+
+Alternative rejected. Authoring only Wazuh XML, or expecting to auto-convert Sigma into Wazuh. Rejected because Wazuh XML is useless to any other SIEM, and because there is no maintained pySigma Wazuh backend; Sigma's field-plus- correlation model does not map onto Wazuh's decoder-and-frequency model, so the Wazuh rules must be hand-written and tested against wazuh-logtest.
+
+Consequences. Two artifacts describe each covered detection and can drift, so they are kept in sync by hand. In exchange the repo shows both a working implementation and a portable spec. Field naming differs by target: Wazuh matches bare JSON keys (and reserved static fields such as status and dstuser via their own tags), while Sigma uses the raw field names.
+
+Verify. sigma convert -t splunk --without-pipeline on the Sigma files produces valid SPL (the distributed rule yields stats dc(client_ip) ... value_count >= 10), and the matching Wazuh rules fire in wazuh-logtest.
 
 ## D-XXXX: <short imperative title>
 
