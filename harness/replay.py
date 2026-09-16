@@ -24,6 +24,15 @@ VALID_CATEGORIES = {"benign", "sqli", "xss", "traversal", "bruteforce", "enum"}
 VALID_EXPECTED = {"allow", "block"}
 REQUIRED = {"id", "category", "endpoint", "method", "params", "expected"}
 
+# Default User-Agent. Real users and most real attackers send a browser UA, so
+# we send one too. Without it the requests library sends "python-requests/x",
+# which CRS rule 913100/913101 flags as a scripting client at paranoia level 2+,
+# blocking every request and contaminating the measurement with the test
+# client's fingerprint instead of the payload's content. A payload may override
+# this by setting its own User-Agent in its headers.
+DEFAULT_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+              "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+
 
 def validate(entry, src):
     missing = REQUIRED - set(entry)
@@ -62,7 +71,9 @@ def send_one(target, entry, timeout):
     url = target.rstrip("/") + entry["endpoint"]
     method = entry.get("method", "GET").upper()
     params = entry.get("params") or {}
-    headers = dict(entry.get("headers") or {})
+    # Browser UA by default; a payload's own headers win if it sets them.
+    headers = {"User-Agent": DEFAULT_UA}
+    headers.update(entry.get("headers") or {})
     # The correlation id. Regenerated per send so replays never collide.
     headers["X-Lab-Request-Id"] = request_id
 

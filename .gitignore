@@ -56,3 +56,8 @@ reports/*.csv
 .DS_Store
 Thumbs.db
 *Zone.Identifier
+
+# Attack corpora derived from PayloadsAllTheThings (rebuild via ATTACKS.md)
+harness/payloads/sqli.yaml
+harness/payloads/xss.yaml
+harness/payloads/traversal.yaml

@@ -6,6 +6,7 @@ converted to the YAML schema by `build_attacks.py`, which stamps every entry wit
 a citation of the form:
 
     PayloadsAllTheThings@<commit>:<path inside repo>:L<line>
+    commit hash: 3ac2790
 
 ## Before you copy anything
 
