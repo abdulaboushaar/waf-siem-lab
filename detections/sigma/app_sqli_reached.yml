@@ -1,0 +1,24 @@
+title: SQL Injection Reached Application on search.php
+id: 66d27d3a-4ace-4e0d-a977-594e44b9b87a
+status: experimental
+description: >
+  A request to search.php produced a database error, which on this application
+  means an SQL injection payload reached and broke the vulnerable concatenated
+  query. The WAF did not block it.
+references:
+  - https://github.com/abdulaboushaar/waf-siem-lab
+logsource:
+  product: waf_siem_lab
+  service: app
+detection:
+  selection:
+    path|contains: '/search.php'
+    db_error|exists: true
+  condition: selection
+falsepositives:
+  - A benign search containing an apostrophe (for example "Builder's") breaks the
+    injectable query and produces a db_error with no attack present.
+level: high
+tags:
+  - attack.initial-access
+  - attack.t1190

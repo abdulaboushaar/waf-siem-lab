@@ -1,0 +1,37 @@
+title: Failed Login On Lab App
+id: 55a480bd-115e-4bb8-b909-23b01459a502
+name: waf_lab_failed_login
+status: experimental
+description: A single failed login attempt on the lab application.
+logsource:
+  product: waf_siem_lab
+  service: app
+detection:
+  selection:
+    path|contains: '/login.php'
+    outcome|startswith: 'login_failed'
+  condition: selection
+level: informational
+tags:
+  - attack.credential-access
+  - attack.t1110.001
+---
+title: Brute Force From A Single Source
+id: d7f24312-1c4a-4a51-9959-0788cc829891
+status: experimental
+description: Ten or more failed logins from one source IP within 60 seconds.
+correlation:
+  type: event_count
+  rules:
+    - waf_lab_failed_login
+  group-by:
+    - client_ip
+  timespan: 60s
+  condition:
+    gte: 10
+falsepositives:
+  - A shared NAT egress IP (office, school, VPN) where many real users mistype at once.
+level: high
+tags:
+  - attack.credential-access
+  - attack.t1110.001

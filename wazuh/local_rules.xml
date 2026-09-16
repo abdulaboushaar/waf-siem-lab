@@ -1,0 +1,245 @@
+<!--
+  WAF-to-SIEM lab: custom detection rules.
+  Install to the Wazuh manager at /var/ossec/etc/rules/local_rules.xml
+  (mounted from the compose config), then recreate the manager.
+
+  Field names come from the JSON decoder. Flat JSON keys become data.<key>,
+  EXCEPT the key "user", which Wazuh normalizes to data.dstuser (confirmed in
+  this lab's own archives.json). Confirm the IP and user field names once with
+  wazuh-logtest phase-2 output before trusting the correlation rules.
+
+  Rule id range 100100-100122 (Wazuh reserves < 100000 for its own ruleset).
+  MITRE technique ids are best-fit; a couple are debatable and noted as such.
+-->
+<group name="waf_siem_lab,">
+
+  <!-- ============================================================= -->
+  <!-- Base grouping rules (level 0, never alert on their own).       -->
+  <!-- They split the two JSON sources so child rules stay cheap.     -->
+  <!-- ============================================================= -->
+
+  <!-- A WAF event: only these carry data.blocked. -->
+  <rule id="100100" level="0">
+    <decoded_as>json</decoded_as>
+    <field name="blocked">\.+</field>
+    <description>WAF event from the lab pipeline (base rule)</description>
+  </rule>
+
+  <!-- An app event: only these carry data.outcome. -->
+  <rule id="100101" level="0">
+    <decoded_as>json</decoded_as>
+    <field name="outcome">\.+</field>
+    <description>App event from the lab pipeline (base rule)</description>
+  </rule>
+
+  <!-- ============================================================= -->
+  <!-- 1-3: WAF blocked a single-request signature attack (level 5).  -->
+  <!-- top_message is a clean scalar; matched_rule_ids is a JSON array -->
+  <!-- Wazuh does not regex-match cleanly, so we key on top_message.   -->
+  <!-- ============================================================= -->
+
+  <!-- 1. WAF blocked SQLi -->
+  <rule id="100110" level="5">
+    <if_sid>100100</if_sid>
+    <field name="blocked" type="pcre2">^true$</field>
+    <field name="top_message">SQL Injection</field>
+    <description>WAF blocked an SQL injection attempt ($(top_message))</description>
+    <mitre>
+      <id>T1190</id>
+    </mitre>
+    <!-- FALSE POSITIVE: a benign search whose text trips a CRS SQLi rule
+         (an apostrophe, the word "select", a percent sign). The request was
+         blocked, so it lands here even though no attack occurred. This is the
+         WAF's own false positive surfacing as a low-level alert. -->
+  </rule>
+
+  <!-- 2. WAF blocked XSS -->
+  <rule id="100111" level="5">
+    <if_sid>100100</if_sid>
+    <field name="blocked" type="pcre2">^true$</field>
+    <field name="top_message">XSS</field>
+    <description>WAF blocked a cross-site scripting attempt ($(top_message))</description>
+    <mitre>
+      <id>T1059.007</id>
+    </mitre>
+    <!-- FALSE POSITIVE: a benign comment containing angle brackets, an HTML
+         comment-close sequence, or an emoticon that a CRS XSS rule flags. -->
+  </rule>
+
+  <!-- 3. WAF blocked path traversal -->
+  <rule id="100112" level="5">
+    <if_sid>100100</if_sid>
+    <field name="blocked" type="pcre2">^true$</field>
+    <field name="top_message">Path Traversal</field>
+    <description>WAF blocked a path traversal attempt ($(top_message))</description>
+    <mitre>
+      <id>T1083</id>
+    </mitre>
+    <!-- FALSE POSITIVE: a legitimate download whose filename contains ".."
+         or an encoded slash, or a URL path with dot segments. -->
+  </rule>
+
+  <!-- ============================================================= -->
+  <!-- 4. SQLi REACHED the app: far worse than a blocked one. The WAF -->
+  <!--    let it through and the DB threw an error on search.php.      -->
+  <!-- ============================================================= -->
+  <rule id="100113" level="10">
+    <if_sid>100101</if_sid>
+    <field name="path">search.php</field>
+    <field name="db_error">\.+</field>
+    <description>SQL injection reached the application on search.php (db error: $(db_error))</description>
+    <mitre>
+      <id>T1190</id>
+    </mitre>
+    <!-- FALSE POSITIVE: THIS IS A REAL ONE. A benign search containing an
+         apostrophe ("Builder's") breaks the injectable query and produces a
+         db_error with NO attack. This rule cannot tell that apart from real
+         SQLi by the log alone. Tune by excluding known-benign patterns, or
+         better, fix the app so benign apostrophes never error. -->
+  </rule>
+
+  <!-- ============================================================= -->
+  <!-- 5. Stored XSS: a comment stored with a scripting payload.      -->
+  <!--    DATA DEPENDENCY: app.log does NOT currently log the comment  -->
+  <!--    body. To fire, add a "body" field (or an "xss_suspected"     -->
+  <!--    boolean) in comment.php. Rule is written for that field.     -->
+  <!-- ============================================================= -->
+  <rule id="100114" level="9">
+    <if_sid>100101</if_sid>
+    <field name="outcome" type="pcre2">^comment_stored$</field>
+    <field name="body" type="pcre2">(?i)&lt;script|on\w+\s*=</field>
+    <description>Stored XSS payload written to the database via a comment</description>
+    <mitre>
+      <id>T1059.007</id>
+    </mitre>
+    <!-- FALSE POSITIVE: a comment legitimately discussing code, for example a
+         user pasting a script tag while asking a question, or the literal
+         text onload= appearing in prose. -->
+  </rule>
+
+  <!-- ============================================================= -->
+  <!-- 6 + 7: brute force. Atomic "one failed login" rule, then two    -->
+  <!-- frequency rules that count it different ways.                   -->
+  <!-- ============================================================= -->
+
+  <!-- Atomic: a single failed login (either enumeration branch). -->
+  <rule id="100115" level="5">
+    <if_sid>100101</if_sid>
+    <field name="path">login.php</field>
+    <field name="outcome" type="pcre2">^login_failed</field>
+    <description>Failed login attempt for user $(dstuser)</description>
+    <mitre>
+      <id>T1110.001</id>
+    </mitre>
+  </rule>
+
+  <!-- 6. Brute force from ONE source: 10 failures, same IP, 60s. -->
+  <rule id="100116" level="10" frequency="10" timeframe="60">
+    <if_matched_sid>100115</if_matched_sid>
+    <same_field>client_ip</same_field>
+    <description>Brute force: 10+ failed logins from one source in 60s</description>
+    <mitre>
+      <id>T1110.001</id>
+    </mitre>
+    <!-- FALSE POSITIVE: a shared NAT egress IP (an office, a school, a VPN)
+         where many real users mistype passwords in a burst looks like one
+         source hammering the login. -->
+  </rule>
+
+  <!-- 7. Distributed brute force on ONE account: 10 failures for the -->
+  <!--    same username from DIFFERENT source IPs, 120s. -->
+  <!--    Uses same_user (username is the static dstuser field, from    -->
+  <!--    our "user" key) plus different_field on client_ip. It CANNOT  -->
+  <!--    use same_srcip: this attack is many IPs on one account, so    -->
+  <!--    the IPs must DIFFER. different_srcip would also need the       -->
+  <!--    standard srcip field, which our logs do not populate (our key -->
+  <!--    is client_ip, a dynamic field), so we use different_field.    -->
+  <rule id="100117" level="12" frequency="10" timeframe="120">
+    <if_matched_sid>100115</if_matched_sid>
+    <same_user />
+    <different_field>client_ip</different_field>
+    <description>Distributed brute force on account $(dstuser) from multiple sources</description>
+    <mitre>
+      <id>T1110.001</id>
+    </mitre>
+    <!-- FALSE POSITIVE: a single real user with a saved-but-stale password on
+         several devices (phone, laptop, tablet) on different networks all
+         retrying at once. -->
+  </rule>
+
+  <!-- ============================================================= -->
+  <!-- 8. Enumeration sweep: 30 x 404 from one IP in 60s.             -->
+  <!--    DATA DEPENDENCY: 404s are not currently ingested. The app    -->
+  <!--    only logs requests that reach a PHP script, and the WAF audit -->
+  <!--    (RelevantOnly) excludes 404 by regex. To feed this rule,      -->
+  <!--    ingest the nginx access log, or widen the audit relevant      -->
+  <!--    status. Rule keys on data.status 404 for when that source     -->
+  <!--    exists. -->
+  <!-- ============================================================= -->
+  <rule id="100118" level="3">
+    <decoded_as>json</decoded_as>
+    <status>404</status>
+    <description>HTTP 404 not found from $(client_ip)</description>
+    <mitre>
+      <id>T1595.003</id>
+    </mitre>
+  </rule>
+
+  <rule id="100119" level="8" frequency="30" timeframe="60">
+    <if_matched_sid>100118</if_matched_sid>
+    <same_field>client_ip</same_field>
+    <description>Enumeration sweep: 30+ 404s from one source in 60s</description>
+    <mitre>
+      <id>T1595.003</id>
+    </mitre>
+    <!-- FALSE POSITIVE: a broken page with many dead asset links, or a
+         vulnerability scanner a teammate is legitimately running against the
+         lab, produces a burst of 404s that is not hostile reconnaissance. -->
+  </rule>
+
+  <!-- ============================================================= -->
+  <!-- 9. Broken access control: admin.php reached with admin granted, -->
+  <!--    by a session whose role is not admin.                        -->
+  <!--    DATA DEPENDENCY / SUBTLE: the app logs the CLIENT-CONTROLLED  -->
+  <!--    cookie value as data.role, so on the current app data.role    -->
+  <!--    equals "admin" whenever admin_allowed fires and this rule     -->
+  <!--    will NOT match. To detect the real BAC, log the AUTHENTICATED -->
+  <!--    session role separately (e.g. data.session_role) and negate   -->
+  <!--    on that. Rule written against data.role per spec; see README. -->
+  <!-- ============================================================= -->
+  <rule id="100120" level="12">
+    <if_sid>100101</if_sid>
+    <field name="path">admin.php</field>
+    <field name="outcome" type="pcre2">^admin_allowed$</field>
+    <field name="role" negate="yes" type="pcre2">^admin$</field>
+    <description>Admin panel accessed by a non-admin role ($(role))</description>
+    <mitre>
+      <id>T1548</id>
+    </mitre>
+    <!-- FALSE POSITIVE: a legitimate admin whose role is spelled differently
+         ("administrator", "superadmin") would be flagged by an over-strict
+         "not exactly admin" match. -->
+  </rule>
+
+  <!-- ============================================================= -->
+  <!-- 10. High anomaly score but NOT blocked: the WAF scored the      -->
+  <!--     request suspicious yet let it through (score 3-4, under the  -->
+  <!--     block threshold of 5). Probing / near-miss.                 -->
+  <!--     DATA DEPENDENCY: a not-blocked request returns 200, which    -->
+  <!--     RelevantOnly does not log. To feed this rule, set the WAF     -->
+  <!--     MODSEC_AUDIT_ENGINE to On so every scored request is logged.  -->
+  <!-- ============================================================= -->
+  <rule id="100121" level="7">
+    <if_sid>100100</if_sid>
+    <field name="blocked" type="pcre2">^false$</field>
+    <field name="anomaly_score" type="pcre2">^([3-9]|\d{2,})$</field>
+    <description>High WAF anomaly score ($(anomaly_score)) but request not blocked</description>
+    <mitre>
+      <id>T1190</id>
+    </mitre>
+    <!-- FALSE POSITIVE: a benign request that accumulates a few points from
+         low-severity rules (odd User-Agent, unusual header) without being an
+         attack, especially at higher paranoia levels. -->
+  </rule>
+
+</group>

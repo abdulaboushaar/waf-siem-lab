@@ -1,0 +1,40 @@
+title: Failed Login On Lab App (for distributed correlation)
+id: be0b42c2-747d-4b60-982e-12c668f92c06
+name: waf_lab_failed_login_dist
+status: experimental
+description: A single failed login attempt on the lab application.
+logsource:
+  product: waf_siem_lab
+  service: app
+detection:
+  selection:
+    path|contains: '/login.php'
+    outcome|startswith: 'login_failed'
+  condition: selection
+level: informational
+tags:
+  - attack.credential-access
+  - attack.t1110.001
+---
+title: Distributed Brute Force On One Account
+id: 16ec1cf6-b9b6-4058-a8b7-f3fcdb41d073
+status: experimental
+description: >
+  Ten or more DISTINCT source IPs producing failed logins for the SAME username
+  within 120 seconds. Counts distinct client_ip grouped by user.
+correlation:
+  type: value_count
+  rules:
+    - waf_lab_failed_login_dist
+  group-by:
+    - user
+  timespan: 120s
+  condition:
+    gte: 10
+    field: client_ip
+falsepositives:
+  - One real user with a stale saved password retrying across several devices on different networks.
+level: critical
+tags:
+  - attack.credential-access
+  - attack.t1110.001
