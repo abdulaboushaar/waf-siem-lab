@@ -340,7 +340,40 @@ Consequences. Two artifacts describe each covered detection and can drift, so th
 
 Verify. sigma convert -t splunk --without-pipeline on the Sigma files produces valid SPL (the distributed rule yields stats dc(client_ip) ... value_count >= 10), and the matching Wazuh rules fire in wazuh-logtest.
 
-## D-XXXX: <short imperative title>
+--- 
+
+## D-0015: The replay harness sends browser headers, or CRS measures the client not the payload
+
+- **Date:** 2026-09-16
+- **Status:** accepted
+
+**Context.** The sweep measures block rate and false positive rate by replaying
+HTTP requests through the WAF. The Python requests library defaults to a
+`python-requests/x` User-Agent and sends none of the headers a browser sends.
+
+**Decision.** replay.py sends a realistic browser User-Agent on every request
+(a payload may override it), and the sweep targets http://localhost, not
+127.0.0.1.
+
+**Alternative rejected.** Leaving the default client fingerprint. Rejected
+because the first sweep reported an 80% benign false positive rate at PL2, and a
+tally of the blocked requests showed all 80 tripped CRS rule 913100, "Found
+User-Agent associated with scripting/generic HTTP client," on the
+python-requests UA. That measured the test tool, not the traffic, and masked the
+real content-based false positives underneath.
+
+**Consequences.** The numbers now reflect how CRS treats browser traffic. A
+residual jump remains at PL4, but a tally confirmed it is the strict-character
+rules (920272/920273) blocking spaces and apostrophes, which is real CRS
+behavior, not a harness artifact. Measuring how CRS treats scripted clients
+would be a separate axis and would remove the default UA. Corollary already in
+place: localhost avoids rule 920350 (numeric-IP Host header).
+
+**Verify.** After the fix, the PL2 benign false positive rate dropped from 80%
+to 9% and then rose gradually across levels (4, 9, 19, 70), the expected
+paranoia curve.
+
+## D-XXXX:
 
 - **Date:** YYYY-MM-DD
 - **Status:** proposed

@@ -1,254 +1,92 @@
 # WAF-to-SIEM Detection Pipeline
 
-> ## Warning
->
-> This repository contains a **deliberately vulnerable web application**. It has
-> working SQL injection, stored cross-site scripting, path traversal and broken
-> access control. It is built to be attacked, in a lab, on a machine that is not
-> reachable from anywhere else.
->
-> Do not deploy it. Do not expose it to a network you do not control. The Compose
-> file binds every published port to `127.0.0.1` on purpose; do not change that
-> to `0.0.0.0`.
+> This repository contains a deliberately vulnerable web application. It has working SQL injection, stored cross-site scripting, path traversal, and broken access control. It is built to be attacked in a lab, on a machine that is not reachable from anywhere else. Do not deploy it, and do not expose it to a network you do not control.
 
-## What this measures
-
-A web application firewall is standard advice. What it actually buys you is
-rarely measured. This project measures it.
-
-A labeled corpus of attack and benign HTTP requests is replayed through
-ModSecurity v3 running the OWASP Core Rule Set, at each of the four CRS
-paranoia levels, against an application whose vulnerabilities are known and
-real. Every request carries a correlation ID, so the firewall's decision and the
-application's response can be lined up for the same request. The output is a
-block rate and a false positive rate per paranoia level.
-
-The goal is a defensible sentence of the form: *"at paranoia level N the rule
-set stopped X percent of attacks and wrongly stopped Y percent of legitimate
-traffic, and here is the specific legitimate request it broke."*
+This project measures what a web application firewall actually buys you, instead of assuming it. A deliberately vulnerable PHP and MySQL application runs behind ModSecurity with the OWASP Core Rule Set, a Python harness replays a labeled corpus of attack and benign requests through it at each of the four CRS paranoia levels, and a normalizer feeds both the WAF and application logs into Wazuh where custom rules turn them into alerts. Every request carries a correlation ID so the firewall's decision and the application's response can be joined for the same request. The output is a block rate and a false positive rate per paranoia level, and a per-endpoint decision about which level to ship, backed by the numbers rather than by intuition.
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    H["Replay harness<br/>labeled payloads"] -->|X-Lab-Request-Id| W["ModSecurity v3<br/>+ OWASP CRS<br/>(nginx)"]
-    W -->|allowed| A["PHP 8.3 app<br/>deliberately vulnerable"]
-    A --> D[("MySQL 8")]
-    W --> AUD["ModSecurity<br/>JSON audit log"]
-    A --> APP["app.log<br/>one JSON line per request"]
-    AUD --> N["Python normalizer<br/>flattens audit JSON"]
-    N --> Z["Wazuh manager<br/>indexer + dashboard"]
-    APP --> Z
-    Z --> R["Report:<br/>block rate + FP rate<br/>per paranoia level"]
+```
+  replay.py                 ModSecurity v3 + OWASP CRS            PHP 8.3 app            MySQL 8
+  (labeled corpus)          (nginx reverse proxy)                 (deliberately vuln)
+      |                            |                                   |                    |
+      |  HTTP + X-Lab-Request-Id   |            allowed traffic        |     SQL            |
+      +--------------------------> |  -------------------------------> |  ----------------> |
+                                   |                                   |                    |
+                                   | JSON audit log                    | app.log (JSON,     |
+                                   |     |                             | one line/request)  |
+                                   |     v                             |     |              |
+                                   | normalizer.py                     |     |              |
+                                   | (flatten to waf_events.jsonl)     |     |              |
+                                   |     |                             |     |              |
+                                   |     +-----------+     +-----------+     |              |
+                                   |                 v     v                 |              |
+                                   |            Wazuh manager  <-------------+              |
+                                   |          (JSON decoders + local_rules.xml)            |
+                                   |                 |                                      |
+                                   |                 v                                      |
+                                   |        Wazuh indexer + dashboard                      |
+                                   |                                                       |
+                                   +--- report.py joins results + logs on request_id ------+
+                                              |
+                                              v
+                                   docs/summary.md  (block rate + FP rate per PL)
 ```
 
-The correlation ID is the load-bearing part. The harness stamps every request
-with `X-Lab-Request-Id`. The WAF records it in its audit log, the application
-records it in its own log, and the two can therefore be joined on that id for
-the same request. Without it there are two unrelated piles of logs.
+The correlation ID is the load-bearing part. The harness stamps every request with `X-Lab-Request-Id`, the WAF records it in its audit log, the application records it in its own log, and the two are joined on that ID. Without it there would be two unrelated piles of logs.
 
-## Status
+## Results
 
-| Component | State |
-|-----------|-------|
-| Host environment (WSL2, Docker, toolchain) | Done |
-| Vulnerable PHP app, MySQL, structured request log | Done |
-| Traffic harness (labeled corpus, replay, report) | Done |
-| ModSecurity + CRS reverse proxy (WAF) | Done |
-| Python normalizer for the ModSecurity audit log | Not started |
-| Wazuh single-node ingest and detection rules | Not started |
-| Paranoia-level measurement runs and final report | Not started |
+Corpus: 90 attack payloads (40 SQLi, 30 XSS, 20 traversal, sourced from PayloadsAllTheThings) and 100 benign requests designed to be plausible false positives. Blocking mode, one enforced run per paranoia level.
 
-## Host prerequisites
+| PL | Attacks blocked | Attacks reached app | SQLi errored DB | Benign blocked | FP rate |
+|----|-----------------|---------------------|-----------------|----------------|--------:|
+| 1  | 69/90 (76.7%)   | 17                  | 2               | 4/100          | 4.0%    |
+| 2  | 73/90 (81.1%)   | 13                  | 1               | 9/100          | 9.0%    |
+| 3  | 74/90 (82.2%)   | 12                  | 0               | 19/100         | 19.0%   |
+| 4  | 74/90 (82.2%)   | 12                  | 0               | 70/100         | 70.0%   |
 
-Developed on Windows 11 with WSL2 (Ubuntu 24.04) and Docker Desktop with WSL
-integration enabled. Any Linux host with Docker and Compose v2 works.
+Per class, SQLi detection rose from 72.5 percent at PL1 to 85 percent at PL3 and then stopped improving, traversal was blocked 100 percent at every level, and XSS held flat at 66.7 percent at every level.
 
-The repository must live on the Linux filesystem (`~/waf-siem-lab`), not under
-`/mnt/c`. See D-0001 in `DECISIONS.md`.
+Recommended paranoia levels are chosen per endpoint. Login runs at PL1, because the WAF does nothing against brute force, which is the real threat on a login form, and the SIEM is what actually detects it, so a higher paranoia level would only add lockout risk for no gain. Search runs at PL2, because going from PL2 to PL3 catches only one more attack but doubles the false positive rate, and the real fix for search is parameterizing the query, after which SQLi cannot reach the database at any level. Product pages run at PL1, because a product view has almost no attack surface and nothing to false-positive on, and the real cross-site scripting defense is output encoding when the app renders comments. Across the sweep only SQLi detection responded to paranoia at all, and most of the roughly 18 percent of attacks that leak are XSS that no paranoia level closes, which only application-side output encoding does. PL4 is never worth shipping here, since it catches no more attacks than PL3 while blocking 70 percent of legitimate traffic through its strict-character rules.
 
-Wazuh's indexer requires `vm.max_map_count` of at least 262144. On WSL2 this is
-set for the whole VM, outside this repository, in `%UserProfile%\.wslconfig`:
+## How to run it
 
-```ini
-[wsl2]
-kernelCommandLine = sysctl.vm.max_map_count=1048576
-memory=12GB
-processors=4
-swap=4GB
 ```
-
-Apply it with `wsl --shutdown` and verify with `cat /proc/cmdline` inside WSL.
-See D-0002.
-
-## Quick start
-
-```bash
-cp .env.example .env
-# edit .env and set your own values
+cp .env.example .env      # then edit .env and set your own passwords
 docker compose up -d --build
-docker compose ps            # wait for lab-db healthy, lab-waf-init exited 0
+curl -s -H 'X-Lab-Request-Id: smoke' http://localhost:8080/index.php | head
 ```
 
-The WAF is the only host-facing entry point, on <http://localhost:8080>. The app
-is not published to the host; it is reachable only through the WAF on the
-internal network.
+That brings up the vulnerable app and the WAF on `http://localhost:8080`. Standing up Wazuh and wiring it to the log volumes is documented separately in `siem/README.md`, and the paranoia sweep is `harness/run_matrix.sh` followed by `harness/summarize.py`.
 
-Reseeding the database requires destroying the volume, because MySQL only runs
-`db/init/` on an empty data directory:
+## Detections
 
-```bash
-docker compose down -v && docker compose up -d --build
-```
+Custom Wazuh rules in `wazuh/local_rules.xml`, each with a MITRE ATT&CK technique. A subset is also written as vendor-neutral Sigma in `detections/sigma/`.
 
-## The WAF
+| Rule | Level | Detects | MITRE |
+|------|------:|---------|-------|
+| 100110 | 5  | WAF blocked SQLi | T1190 |
+| 100111 | 5  | WAF blocked XSS | T1059.007 |
+| 100112 | 5  | WAF blocked path traversal | T1083 |
+| 100113 | 10 | SQLi reached the application (search.php db error) | T1190 |
+| 100114 | 9  | Stored XSS written via a comment | T1059.007 |
+| 100116 | 10 | Brute force from one source (10 fails / 60s) | T1110.001 |
+| 100117 | 12 | Distributed brute force on one account | T1110.001 |
+| 100119 | 8  | Enumeration sweep (30 x 404 / 60s) | T1595.003 |
+| 100120 | 12 | Admin panel reached by a non-admin role | T1548 |
+| 100121 | 7  | High WAF anomaly score but not blocked | T1190 |
 
-The `waf` service runs the `owasp/modsecurity-crs:nginx` image as a reverse
-proxy in front of the app. Configuration is split so a measurement run changes
-exactly one variable:
+The WAF-block rules (100110 to 100112) fire on single requests. The brute force, distributed brute force, and enumeration rules are correlation rules, because no single login attempt or single 404 is blockable on its own, which is why those attacks are the SIEM's job and not the WAF's.
 
-- `waf/common.env` holds every setting shared across runs: the backend target,
-  the rule engine mode, JSON audit logging to `/var/log/modsec/modsec_audit.log`
-  on the `modsec_audit` volume, and the anomaly thresholds.
-- `waf/pl1.env` through `waf/pl4.env` set only `BLOCKING_PARANOIA`.
+## What broke and what I would do differently
 
-Select the paranoia level with the `WAF_PL` variable in `.env`
-(`WAF_PL=pl1` .. `pl4`), then `docker compose up -d`. See D-0008.
+The two hardest problems were both in getting Wazuh to read the JSON correctly. Wazuh matches JSON fields in rules by their bare key name, not the `data.` prefix that appears in the alert output, and a few keys such as `status` and the mapped `dstuser` are static fields that must be matched with their own tags rather than a generic field condition. Getting either wrong makes analysisd refuse to load the whole ruleset. On top of that, a single-file bind mount pins to an inode, so replacing `local_rules.xml` on the host does nothing until the container is recreated with `--force-recreate`, and the manager only copies its config on recreate, not on restart. All of that is documented in `siem/README.md` so it does not have to be rediscovered.
 
-**Modes.** The rule engine starts in `DetectionOnly` for bring-up (inspect and
-score, never block), then is switched to `On` for measurement (enforce blocks).
-With `MODSEC_AUDIT_ENGINE=RelevantOnly` and blocking on, the audit log records
-exactly the requests that were blocked, which is what the report counts. See
-D-0009.
+The most important lesson was in the measurement itself. The first sweep reported an 80 percent false positive rate at paranoia level 2, which is not real CRS behavior. Tallying the blocked requests showed all of them tripped one rule, 913100, flagging the `python-requests` User-Agent as a scripting client. The harness was measuring itself, not the traffic. Sending a browser User-Agent by default fixed it and the real curve emerged. The general point is that a measurement tool that is distinguishable from real traffic measures its own fingerprint, and the only way I caught it was by not trusting a number that looked wrong and reading the rule that produced it.
 
-**Audit volume ownership.** The image runs as the unprivileged `nginx` user, but
-the `modsec_audit` volume mounts in owned by root. A one-shot `waf-init`
-container fixes the ownership before the WAF starts, so the audit log is
-writable on a fresh clone with no manual step. See D-0011.
+Three detections currently need pipeline additions to fire on live data, and they are documented as such: stored XSS needs the comment body logged, the enumeration rule needs a 404 source ingested since the app logs no line for a missing path and the WAF audit excludes 404, and the broken-access-control rule needs the authenticated session role logged separately because the app currently logs the client-controlled cookie value in that field. Given more time I would add those fields, ingest the nginx access log for 404 visibility, and break the block rate down by attack style rather than by broad class, since the blended figure hides which specific evasions leak. The single most valuable follow-up is per-style block rate, because it would show exactly which XSS and SQLi variants the rule set misses.
 
-**Custom exclusions.** `waf/rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf`
-fixes a false positive on apostrophes in the search box, scoped to `/search.php`
-and the `q` parameter only. It is a documented remediation, not part of the raw
-measurement, so its mount is commented out in `docker-compose.yml` and enabled
-only for the tuned comparison run. See D-0010.
+## Sources and credits
 
-**Measurement hygiene.** Replay against `http://localhost:8080`, never
-`http://127.0.0.1:8080`. A numeric-IP Host header trips CRS rule 920350 and adds
-score to every request, which would inflate the false positive rate with an
-artifact of how the client addressed the server. `localhost` is a name, so the
-rule does not fire. `replay.py` defaults to `localhost`.
-
-Pin the image by digest in `docker-compose.yml` (not the moving `:nginx` tag) so
-a paranoia sweep cannot have the CRS version change underneath it between runs.
-
-## Test accounts
-
-Weak on purpose, so the replay harness can succeed against them.
-
-| Username | Password   | Role  |
-|----------|------------|-------|
-| admin    | admin123   | admin |
-| alice    | password1  | user  |
-| bob      | hunter2    | user  |
-
-## The deliberate vulnerabilities
-
-Each endpoint carries exactly one primary defect and uses correct practice
-everywhere else, so that a blocked request can be attributed to one known
-weakness. See D-0005.
-
-| Endpoint | Class | CWE | Demo | Fix |
-|----------|-------|-----|------|-----|
-| `search.php` | SQL injection | CWE-89 | `?q=' OR '1'='1` returns all rows | Prepared statement with a bound parameter |
-| `product.php` | Stored XSS | CWE-79 | Post a comment containing an `onerror` payload | Escape on output with `htmlspecialchars` |
-| `download.php` | Path traversal | CWE-22 | `?file=../../../../etc/passwd` | `realpath()` then verify the resolved path stays under the base directory |
-| `admin.php` | Broken access control | CWE-565 | `curl -b 'role=admin'` returns the account table | Read the role from server-side session state and re-check it in the database |
-| `login.php` | Username enumeration | CWE-204 | "No such user" differs from "Wrong password" | One identical message for both failures, plus a dummy hash comparison so timing matches |
-| `login.php` | No authentication throttling | CWE-307 | Unlimited attempts | Per-account and per-IP failure counters with backoff or lockout |
-
-Secondary issues are annotated in the source but are not the targets of the
-replay harness: verbose SQL error disclosure (CWE-209) in `search.php`, and a
-missing CSRF token (CWE-352) on the comment form.
-
-Every deliberate weakness is marked in the source with a `VULNERABILITY:`
-comment naming the CWE and the one-line fix.
-
-## The traffic harness
-
-`harness/` holds the labeled corpus and the tooling that fires it.
-
-- `harness/payloads/benign.yaml`, `bruteforce.yaml`, `enum.yaml` are generated
-  by `gen_corpus.py` and tied to the seed data.
-- The `sqli`, `xss` and `traversal` sets are built from PayloadsAllTheThings by
-  `build_attacks.py`, with a citation in every entry. See `payloads/ATTACKS.md`
-  and D-0006.
-- `bruteforce` and `enum` are labeled `expected: allow`, because they are not
-  single-request WAF-blockable; their detection is a SIEM correlation job. See
-  D-0007.
-- `replay.py` sends each payload with a fresh `X-Lab-Request-Id` and records
-  status and blocked/allowed to `results/<label>.csv`.
-- `report.py` joins the results with the WAF and app logs on the correlation id
-  and prints block rate and false positive rate per category.
-
-## Application log schema
-
-Every request appends exactly one JSON object to `/var/log/app/app.log`, which
-lives on the `app_logs` named volume so later containers can read it. See
-D-0004.
-
-| Field | Meaning |
-|-------|---------|
-| `ts` | RFC 3339 UTC timestamp with milliseconds |
-| `request_id` | Value of the `X-Lab-Request-Id` header, or `"none"` |
-| `method` | HTTP method |
-| `path` | Request path, query string excluded |
-| `client_ip` | First value of `X-Forwarded-For`, else the socket peer |
-| `user` | Authenticated username, or `null` |
-| `role` | Role in effect for the request, or `null` |
-| `outcome` | Short result token, for example `search_ok`, `download_denied`, `admin_allowed` |
-| `db_error` | PDO error text when a query failed, else `null` |
-
-An `outcome` of `unhandled` means the request died before setting one, which is
-itself a signal worth alerting on.
-
-Inspect it with:
-
-```bash
-docker compose exec -T app cat /var/log/app/app.log | jq -c '[.request_id, .outcome]'
-```
-
-## Repository layout
-
-```
-waf-siem-lab/
-├── DECISIONS.md            architecture decision log
-├── docker-compose.yml
-├── .env.example            copy to .env; .env is never committed
-├── app/
-│   ├── Dockerfile          php:8.3-apache + pdo_mysql
-│   ├── src/                application source
-│   └── specs/              spec sheets, outside the document root
-├── db/
-│   └── init/               schema and seed, run once on first start
-├── waf/
-│   ├── common.env          shared WAF config
-│   ├── pl1.env .. pl4.env   paranoia level only
-│   └── rules/              custom exclusion (documented remediation)
-└── harness/
-    ├── replay.py
-    ├── report.py
-    └── payloads/           corpus and generators
-```
-
-## Decisions
-
-`DECISIONS.md` records every non-obvious choice made while building this, with
-the alternative that was rejected and why. Read it before the code.
-
-## Secrets
-
-No credentials, private keys or certificates are committed. `.env` is ignored;
-`.env.example` documents the shape. Wazuh's TLS material is generated locally
-and is excluded by `.gitignore`, which means a fresh clone needs the generation
-step rather than working immediately. That tradeoff is deliberate and is
-recorded in `DECISIONS.md`.
+OWASP Core Rule Set, the rule set under test, at https://coreruleset.org. Wazuh, the SIEM, at https://wazuh.com, deployed from the official wazuh-docker single-node stack at https://github.com/wazuh/wazuh-docker. The WAF container is the official `owasp/modsecurity-crs` nginx image at https://github.com/coreruleset/modsecurity-crs-docker, pinned by digest so the four paranoia levels are compared against one fixed rule set version. The attack corpus is copied from PayloadsAllTheThings at https://github.com/swisskyrepo/PayloadsAllTheThings, with the commit hash and licence recorded in `harness/payloads/ATTACKS.md`; those payload files are not committed to this repository and are rebuilt locally per that document.
